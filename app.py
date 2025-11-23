@@ -317,8 +317,7 @@ def analyze_behaviours(behaviours, role: str, profile: str):
 def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     """
     Draw a semi-cartoon person inside the given box.
-    Uses only basic Pillow primitives (ellipse, rectangle, line, arc)
-    so it works on all Pillow versions.
+    Uses only basic Pillow primitives so it works everywhere.
     """
     left, top, right, bottom = box
     width = right - left
@@ -355,7 +354,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     if warmth == "cold":
         skin_color = (232, 220, 210)
 
-    # Panel background (simple rectangle)
+    # Panel background
     margin = 8
     draw.rectangle(
         (left + margin, top + margin, right - margin, bottom - margin),
@@ -375,7 +374,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         width=2,
     )
 
-    # Hair (simple half-circle)
+    # Hair
     draw.pieslice(
         (cx - head_radius, head_cy - head_radius,
          cx + head_radius, head_cy + head_radius),
@@ -413,7 +412,6 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
                      cx - eye_offset_x + brow_len, brow_y)
         right_brow = (cx + eye_offset_x - brow_len, brow_y,
                       cx + eye_offset_x + 5, brow_y)
-
     draw.line(left_brow, fill=(50, 40, 40), width=2)
     draw.line(right_brow, fill=(50, 40, 40), width=2)
 
@@ -450,14 +448,12 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     body_top = head_cy + head_radius + neck_h
     body_h = int(height * 0.30)
     body_w = int(width * 0.32)
-
     if energy == "high":
         tilt = -6
     elif energy == "low":
         tilt = 6
     else:
         tilt = 0
-
     body_left = cx - body_w // 2 + tilt
     body_right = cx + body_w // 2 + tilt
 
@@ -472,9 +468,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     arm_y = body_top + 35
     arm_len = int(height * 0.22)
     arm_width = 10
-
     if openness == "open":
-        # welcoming arms
         draw.line(
             (body_left + 5, arm_y,
              body_left - 30, arm_y + arm_len),
@@ -486,7 +480,6 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
             fill=shirt_color, width=arm_width
         )
     elif openness == "closed":
-        # crossed arms
         cross_y = arm_y + 20
         draw.line(
             (body_left + 5, cross_y + 10,
@@ -499,7 +492,6 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
             fill=shirt_color, width=arm_width
         )
     else:
-        # neutral arms down
         draw.line(
             (body_left + 5, arm_y,
              body_left + 5, arm_y + arm_len),
@@ -516,7 +508,6 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     leg_len = int(height * 0.26)
     leg_gap = 18
     leg_w = 16
-
     draw.rectangle(
         (cx - leg_gap - leg_w, leg_top,
          cx - leg_gap + leg_w, leg_top + leg_len),
@@ -552,7 +543,7 @@ def create_avatar_image(title: str, behaviours, role: str, profile: str, filenam
     title_font = get_font(38)
     draw.text((40, 30), title, font=title_font, fill=(34, 46, 80))
 
-    # Small subtitle
+    # Subtitle
     subtitle_font = get_font(20)
     subtitle = f"{role.capitalize()} - {profile.capitalize()} profile"
     draw.text((40, 70), subtitle, font=subtitle_font, fill=(90, 104, 128))
@@ -579,7 +570,9 @@ def create_avatar_image(title: str, behaviours, role: str, profile: str, filenam
             line = ""
             for w in words:
                 test_line = (line + " " + w).strip()
-                w_width, _ = draw.textsize(test_line, font=behaviour_font)
+                # Pillow 10+: use textbbox instead of textsize
+                bbox = draw.textbbox((0, 0), test_line, font=behaviour_font)
+                w_width = bbox[2] - bbox[0]
                 if w_width > max_width and line:
                     draw.text((text_left, y), "• " + line,
                               font=behaviour_font, fill=(20, 20, 20))
