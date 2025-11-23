@@ -343,3 +343,417 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         base_bg = (227, 242, 235)      # soft greenish
         shirt_color = (60, 87, 124)    # Boliden blue
     elif traits["profile"] == "worst" or mood == "bad":
+        base_bg = (248, 231, 231)      # soft red tint
+        shirt_color = (179, 65, 60)    # muted red
+    else:
+        base_bg = (228, 236, 246)      # soft blue
+        shirt_color = (117, 167, 212)  # lighter blue
+
+    # Trainees lite ljusare
+    if role == "trainee":
+        shirt_color = tuple(min(255, c + 20) for c in shirt_color)
+
+    pants_color = (44, 62, 80)
+    if reliability == "low":
+        pants_color = (127, 140, 141)
+
+    skin_color = (244, 222, 200)
+    hair_color = (70, 50, 40)
+    if warmth == "cold":
+        skin_color = (232, 220, 210)
+
+    # Panel background
+    panel_margin = 8
+    draw.rounded_rectangle(
+        (left + panel_margin, top + panel_margin,
+         right - panel_margin, bottom - panel_margin),
+        radius=20,
+        fill=base_bg,
+        outline=(208, 214, 225),
+        width=2
+    )
+
+    # Proportions
+    head_radius = int(height * 0.13)
+    head_cy = top + int(height * 0.24)
+
+    # Head
+    draw.ellipse(
+        (cx - head_radius, head_cy - head_radius,
+         cx + head_radius, head_cy + head_radius),
+        fill=skin_color,
+        outline=(90, 90, 90),
+        width=2
+    )
+
+    # Hair cap
+    hair_top = head_cy - head_radius
+    draw.pieslice(
+        (cx - head_radius, hair_top, cx + head_radius, head_cy + head_radius),
+        start=200,
+        end=340,
+        fill=hair_color,
+        outline=hair_color
+    )
+
+    # Eyes
+    eye_y = head_cy - int(head_radius * 0.2)
+    eye_offset_x = int(head_radius * 0.45)
+    eye_r = 4
+
+    for dx in (-eye_offset_x, eye_offset_x):
+        draw.ellipse(
+            (cx + dx - eye_r, eye_y - eye_r, cx + dx + eye_r, eye_y + eye_r),
+            fill=(40, 40, 40)
+        )
+
+    # Eyebrows
+    brow_y = eye_y - 10
+    brow_len = 20
+    if mood == "good":
+        draw.line(
+            (cx - eye_offset_x - 5, brow_y,
+             cx - eye_offset_x + brow_len, brow_y + 2),
+            fill=(50, 40, 40), width=2
+        )
+        draw.line(
+            (cx + eye_offset_x - brow_len, brow_y + 2,
+             cx + eye_offset_x + 5, brow_y),
+            fill=(50, 40, 40), width=2
+        )
+    elif mood == "bad":
+        draw.line(
+            (cx - eye_offset_x - 5, brow_y + 2,
+             cx - eye_offset_x + brow_len, brow_y),
+            fill=(50, 40, 40), width=2
+        )
+        draw.line(
+            (cx + eye_offset_x - brow_len, brow_y,
+             cx + eye_offset_x + 5, brow_y + 2),
+            fill=(50, 40, 40), width=2
+        )
+    else:
+        draw.line(
+            (cx - eye_offset_x - 5, brow_y,
+             cx - eye_offset_x + brow_len, brow_y),
+            fill=(50, 40, 40), width=2
+        )
+        draw.line(
+            (cx + eye_offset_x - brow_len, brow_y,
+             cx + eye_offset_x + 5, brow_y),
+            fill=(50, 40, 40), width=2
+        )
+
+    # Mouth
+    mouth_y = head_cy + int(head_radius * 0.4)
+    mouth_w = int(head_radius * 0.9)
+
+    if mood == "good":
+        draw.arc(
+            (cx - mouth_w, mouth_y - 15, cx + mouth_w, mouth_y + 18),
+            start=200, end=340,
+            fill=(90, 50, 50),
+            width=3
+        )
+    elif mood == "bad":
+        draw.arc(
+            (cx - mouth_w, mouth_y - 5, cx + mouth_w, mouth_y + 25),
+            start=20, end=160,
+            fill=(90, 50, 50),
+            width=3
+        )
+    else:
+        draw.line(
+            (cx - mouth_w // 2, mouth_y, cx + mouth_w // 2, mouth_y),
+            fill=(90, 50, 50),
+            width=3
+        )
+
+    # Neck
+    neck_w = head_radius // 2
+    neck_h = int(height * 0.05)
+    draw.rectangle(
+        (cx - neck_w // 2, head_cy + head_radius,
+         cx + neck_w // 2, head_cy + head_radius + neck_h),
+        fill=skin_color,
+        outline=None
+    )
+
+    # Torso
+    body_top = head_cy + head_radius + neck_h
+    body_h = int(height * 0.30)
+    body_w = int(width * 0.32)
+
+    if energy == "high":
+        tilt = -6
+    elif energy == "low":
+        tilt = 6
+    else:
+        tilt = 0
+
+    body_left = cx - body_w // 2 + tilt
+    body_right = cx + body_w // 2 + tilt
+
+    draw.rounded_rectangle(
+        (body_left, body_top, body_right, body_top + body_h),
+        radius=18,
+        fill=shirt_color,
+        outline=(80, 80, 80),
+        width=2
+    )
+
+    # Arms – openness affects pose
+    arm_y = body_top + 35
+    arm_len = int(height * 0.22)
+    arm_width = 14
+
+    if openness == "open":
+        draw.line(
+            (body_left + 5, arm_y,
+             body_left - 30, arm_y + arm_len),
+            fill=shirt_color,
+            width=arm_width
+        )
+        draw.line(
+            (body_right - 5, arm_y,
+             body_right + 30, arm_y + arm_len),
+            fill=shirt_color,
+            width=arm_width
+        )
+    elif openness == "closed":
+        cross_y = arm_y + 20
+        draw.line(
+            (body_left + 5, cross_y + 10,
+             cx + 10, cross_y - 10),
+            fill=shirt_color,
+            width=arm_width
+        )
+        draw.line(
+            (cx - 10, cross_y - 10,
+             body_right - 5, cross_y + 10),
+            fill=shirt_color,
+            width=arm_width
+        )
+    else:
+        draw.line(
+            (body_left + 5, arm_y,
+             body_left + 5, arm_y + arm_len),
+            fill=shirt_color,
+            width=arm_width
+        )
+        draw.line(
+            (body_right - 5, arm_y,
+             body_right - 5, arm_y + arm_len),
+            fill=shirt_color,
+            width=arm_width
+        )
+
+    # Legs
+    leg_top = body_top + body_h
+    leg_len = int(height * 0.26)
+    leg_gap = 18
+    leg_w = 16
+
+    draw.rectangle(
+        (cx - leg_gap - leg_w, leg_top,
+         cx - leg_gap + leg_w, leg_top + leg_len),
+        fill=(44, 62, 80) if reliability == "high" else (127, 140, 141)
+    )
+    draw.rectangle(
+        (cx + leg_gap - leg_w, leg_top,
+         cx + leg_gap + leg_w, leg_top + leg_len),
+        fill=(44, 62, 80) if reliability == "high" else (127, 140, 141)
+    )
+
+    # Shoes
+    shoe_h = 14
+    draw.rounded_rectangle(
+        (cx - leg_gap - 24, leg_top + leg_len,
+         cx - leg_gap + 28, leg_top + leg_len + shoe_h),
+        radius=7,
+        fill=(30, 30, 30)
+    )
+    draw.rounded_rectangle(
+        (cx + leg_gap - 28, leg_top + leg_len,
+         cx + leg_gap + 24, leg_top + leg_len + shoe_h),
+        radius=7,
+        fill=(30, 30, 30)
+    )
+
+
+def create_avatar_image(title: str, behaviours, role: str, profile: str, filename: str):
+    """Create a full avatar image with figure on the left and behaviours on the right."""
+    img_w, img_h = 1100, 800
+    img = Image.new("RGB", (245, 247, 250))
+    draw = ImageDraw.Draw(img)
+
+    # Title
+    title_font = get_font(38)
+    draw.text((40, 30), title, font=title_font, fill=(34, 46, 80))
+
+    # Small subtitle with role/profile
+    subtitle_font = get_font(20)
+    subtitle = f"{role.capitalize()} – {profile.capitalize()} profile"
+    draw.text((40, 70), subtitle, font=subtitle_font, fill=(90, 104, 128))
+
+    # Analyse behaviours → traits
+    traits = analyze_behaviours(behaviours, role, profile)
+
+    # Avatar box on the left
+    avatar_box = (40, 110, 460, img_h - 40)
+    draw_avatar_person(draw, avatar_box, traits)
+
+    # Behaviours on the right
+    text_left = 500
+    text_top = 130
+    max_width = img_w - text_left - 40
+    behaviour_font = get_font(24)
+    line_spacing = 32
+    y = text_top
+
+    if behaviours:
+        for b in behaviours:
+            b = b.strip()
+            if not b:
+                continue
+            words = b.split()
+            line = ""
+            for w in words:
+                test_line = (line + " " + w).strip()
+                w_width, _ = draw.textsize(test_line, font=behaviour_font)
+                if w_width > max_width and line:
+                    draw.text((text_left, y), "• " + line, font=behaviour_font, fill=(20, 20, 20))
+                    y += line_spacing
+                    line = w
+                else:
+                    line = test_line
+            if line:
+                draw.text((text_left, y), "• " + line, font=behaviour_font, fill=(20, 20, 20))
+                y += line_spacing
+    else:
+        draw.text((text_left, y), "No behaviours entered.", font=behaviour_font, fill=(120, 120, 120))
+
+    img.save(filename)
+
+
+# =========================
+# FLASK ROUTES
+# =========================
+
+@app.route("/", methods=["GET"])
+def index():
+    return render_template_string(html_template)
+
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    output_folder = "avatars_web_output"
+    os.makedirs(output_folder, exist_ok=True)
+
+    result_blocks = []
+
+    # --- Avatar A ---
+    title_a = (request.form.get("title_a") or "").strip()
+    role_a = (request.form.get("role_a") or "mentor").strip().lower()
+    profile_a = (request.form.get("profile_a") or "mixed").strip().lower()
+    behaviours_a_text = request.form.get("behaviours_a") or ""
+    behaviours_a = behaviours_a_text.split("\n")
+
+    if title_a or behaviours_a_text.strip():
+        if not title_a:
+            title_a = "Avatar_A"
+        file_a_name = safe_filename(title_a)
+        file_a_path = os.path.join(output_folder, file_a_name)
+        create_avatar_image(title_a, behaviours_a, role_a, profile_a, file_a_path)
+
+        block = f"""
+        <div class='section'>
+            <h2>{title_a}</h2>
+            <img class="avatar-preview" src="/download/{file_a_name}?inline=1" alt="{title_a}">
+            <br>
+            <a href="/download/{file_a_name}">Download PNG</a>
+        </div>
+        """
+        result_blocks.append(block)
+
+    # --- Avatar B ---
+    title_b = (request.form.get("title_b") or "").strip()
+    role_b = (request.form.get("role_b") or "trainee").strip().lower()
+    profile_b = (request.form.get("profile_b") or "mixed").strip().lower()
+    behaviours_b_text = request.form.get("behaviours_b") or ""
+    behaviours_b = behaviours_b_text.split("\n")
+
+    if title_b or behaviours_b_text.strip():
+        if not title_b:
+            title_b = "Avatar_B"
+        file_b_name = safe_filename(title_b)
+        file_b_path = os.path.join(output_folder, file_b_name)
+        create_avatar_image(title_b, behaviours_b, role_b, profile_b, file_b_path)
+
+        block = f"""
+        <div class='section'>
+            <h2>{title_b}</h2>
+            <img class="avatar-preview" src="/download/{file_b_name}?inline=1" alt="{title_b}">
+            <br>
+            <a href="/download/{file_b_name}">Download PNG</a>
+        </div>
+        """
+        result_blocks.append(block)
+
+    if not result_blocks:
+        return """
+        <h2>No avatars generated</h2>
+        <p>Please go back and enter at least a title or behaviours.</p>
+        <p><a href="/">Back</a></p>
+        """
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Generated Avatars – Boliden Mentorship</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 40px; background: #f4f7fa; color: #1f2933; }}
+            .section {{
+                margin-bottom: 20px;
+                padding: 15px 18px;
+                background: #ffffff;
+                border-radius: 10px;
+                border: 1px solid #d0d7e2;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            }}
+            .avatar-preview {{
+                max-width: 380px;
+                border-radius: 8px;
+                border: 1px solid #d0d7e2;
+                background: white;
+            }}
+            a {{ color: #3C577C; }}
+            a:hover {{ text-decoration: underline; }}
+        </style>
+    </head>
+    <body>
+        <h1>Generated Avatars</h1>
+        {''.join(result_blocks)}
+        <p><a href="/">Create more avatars</a></p>
+    </body>
+    </html>
+    """
+    return html
+
+
+@app.route("/download/<filename>", methods=["GET"])
+def download(filename):
+    filepath = os.path.join("avatars_web_output", filename)
+    if not os.path.exists(filepath):
+        return "File not found", 404
+
+    inline = request.args.get("inline")
+    if inline:
+        return send_file(filepath, mimetype="image/png")
+    else:
+        return send_file(filepath, as_attachment=True)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
