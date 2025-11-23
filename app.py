@@ -22,7 +22,7 @@ html_template = """
         }
         h1 {
             margin-bottom: 4px;
-            color: #3C577C; /* Boliden blue-ish */
+            color: #3C577C;
         }
         small {
             color: #6b7b8c;
@@ -194,12 +194,7 @@ def safe_filename(title: str) -> str:
 
 def analyze_behaviours(behaviours, role: str, profile: str):
     """
-    Analyse the behaviour text and derive visual traits:
-    - mood: good / bad / neutral
-    - energy: high / medium / low
-    - openness: open / closed
-    - reliability: high / low
-    - warmth: warm / cold
+    Analyse behaviour text and derive visual traits.
     """
     text = ("\n".join(behaviours)).lower()
 
@@ -262,7 +257,7 @@ def analyze_behaviours(behaviours, role: str, profile: str):
     score_warm = sum(w in text for w in warmth_words)
     score_cold = sum(w in text for w in cold_words)
 
-    # Mood baseline from profile type
+    # Mood baseline
     if profile == "ultimate":
         mood = "good"
     elif profile == "worst":
@@ -270,7 +265,6 @@ def analyze_behaviours(behaviours, role: str, profile: str):
     else:
         mood = "neutral"
 
-    # Adjust mood from text
     if score_pos > score_neg + 1:
         mood = "good"
     elif score_neg > score_pos + 1:
@@ -297,7 +291,7 @@ def analyze_behaviours(behaviours, role: str, profile: str):
     else:
         warmth = "neutral"
 
-    # Openness: combination of mood, warmth
+    # Openness
     if mood == "good" or warmth == "warm":
         openness = "open"
     elif mood == "bad" or warmth == "cold":
@@ -313,7 +307,6 @@ def analyze_behaviours(behaviours, role: str, profile: str):
         "reliability": reliability,
         "warmth": warmth,
         "openness": openness,
-        "raw_text": text
     }
 
 
@@ -324,8 +317,8 @@ def analyze_behaviours(behaviours, role: str, profile: str):
 def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     """
     Draw a semi-cartoon person inside the given box.
-    box: (left, top, right, bottom)
-    traits: dict from analyze_behaviours()
+    Uses only basic Pillow primitives (ellipse, rectangle, line, arc)
+    so it works on all Pillow versions.
     """
     left, top, right, bottom = box
     width = right - left
@@ -339,18 +332,17 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     openness = traits["openness"]
     role = traits["role"]
 
-    # Colour theme based on Boliden-like palette
+    # Colour theme
     if traits["profile"] == "ultimate" or mood == "good":
-        base_bg = (227, 242, 235)      # soft greenish
-        shirt_color = (60, 87, 124)    # Boliden blue
+        panel_color = (227, 242, 235)
+        shirt_color = (60, 87, 124)
     elif traits["profile"] == "worst" or mood == "bad":
-        base_bg = (248, 231, 231)      # soft red tint
-        shirt_color = (179, 65, 60)    # muted red
+        panel_color = (248, 231, 231)
+        shirt_color = (179, 65, 60)
     else:
-        base_bg = (228, 236, 246)      # soft blue
-        shirt_color = (117, 167, 212)  # lighter blue
+        panel_color = (228, 236, 246)
+        shirt_color = (117, 167, 212)
 
-    # Trainees slightly lighter
     if role == "trainee":
         shirt_color = tuple(min(255, c + 20) for c in shirt_color)
 
@@ -363,111 +355,85 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     if warmth == "cold":
         skin_color = (232, 220, 210)
 
-    # Panel background
-    panel_margin = 8
-    draw.rounded_rectangle(
-        (left + panel_margin, top + panel_margin,
-         right - panel_margin, bottom - panel_margin),
-        radius=20,
-        fill=base_bg,
+    # Panel background (simple rectangle)
+    margin = 8
+    draw.rectangle(
+        (left + margin, top + margin, right - margin, bottom - margin),
+        fill=panel_color,
         outline=(208, 214, 225),
-        width=2
+        width=2,
     )
 
-    # Proportions
+    # Head
     head_radius = int(height * 0.13)
     head_cy = top + int(height * 0.24)
-
-    # Head
     draw.ellipse(
         (cx - head_radius, head_cy - head_radius,
          cx + head_radius, head_cy + head_radius),
         fill=skin_color,
         outline=(90, 90, 90),
-        width=2
+        width=2,
     )
 
-    # Hair cap
-    hair_top = head_cy - head_radius
+    # Hair (simple half-circle)
     draw.pieslice(
-        (cx - head_radius, hair_top, cx + head_radius, head_cy + head_radius),
-        start=200,
-        end=340,
+        (cx - head_radius, head_cy - head_radius,
+         cx + head_radius, head_cy + head_radius),
+        start=200, end=340,
         fill=hair_color,
-        outline=hair_color
+        outline=hair_color,
     )
 
     # Eyes
     eye_y = head_cy - int(head_radius * 0.2)
     eye_offset_x = int(head_radius * 0.45)
     eye_r = 4
-
     for dx in (-eye_offset_x, eye_offset_x):
         draw.ellipse(
-            (cx + dx - eye_r, eye_y - eye_r, cx + dx + eye_r, eye_y + eye_r),
-            fill=(40, 40, 40)
+            (cx + dx - eye_r, eye_y - eye_r,
+             cx + dx + eye_r, eye_y + eye_r),
+            fill=(40, 40, 40),
         )
 
-    # Eyebrows
+    # Brows
     brow_y = eye_y - 10
     brow_len = 20
     if mood == "good":
-        draw.line(
-            (cx - eye_offset_x - 5, brow_y,
-             cx - eye_offset_x + brow_len, brow_y + 2),
-            fill=(50, 40, 40), width=2
-        )
-        draw.line(
-            (cx + eye_offset_x - brow_len, brow_y + 2,
-             cx + eye_offset_x + 5, brow_y),
-            fill=(50, 40, 40), width=2
-        )
+        left_brow = (cx - eye_offset_x - 5, brow_y,
+                     cx - eye_offset_x + brow_len, brow_y + 2)
+        right_brow = (cx + eye_offset_x - brow_len, brow_y + 2,
+                      cx + eye_offset_x + 5, brow_y)
     elif mood == "bad":
-        draw.line(
-            (cx - eye_offset_x - 5, brow_y + 2,
-             cx - eye_offset_x + brow_len, brow_y),
-            fill=(50, 40, 40), width=2
-        )
-        draw.line(
-            (cx + eye_offset_x - brow_len, brow_y,
-             cx + eye_offset_x + 5, brow_y + 2),
-            fill=(50, 40, 40), width=2
-        )
+        left_brow = (cx - eye_offset_x - 5, brow_y + 2,
+                     cx - eye_offset_x + brow_len, brow_y)
+        right_brow = (cx + eye_offset_x - brow_len, brow_y,
+                      cx + eye_offset_x + 5, brow_y + 2)
     else:
-        draw.line(
-            (cx - eye_offset_x - 5, brow_y,
-             cx - eye_offset_x + brow_len, brow_y),
-            fill=(50, 40, 40), width=2
-        )
-        draw.line(
-            (cx + eye_offset_x - brow_len, brow_y,
-             cx + eye_offset_x + 5, brow_y),
-            fill=(50, 40, 40), width=2
-        )
+        left_brow = (cx - eye_offset_x - 5, brow_y,
+                     cx - eye_offset_x + brow_len, brow_y)
+        right_brow = (cx + eye_offset_x - brow_len, brow_y,
+                      cx + eye_offset_x + 5, brow_y)
+
+    draw.line(left_brow, fill=(50, 40, 40), width=2)
+    draw.line(right_brow, fill=(50, 40, 40), width=2)
 
     # Mouth
     mouth_y = head_cy + int(head_radius * 0.4)
     mouth_w = int(head_radius * 0.9)
-
     if mood == "good":
         draw.arc(
             (cx - mouth_w, mouth_y - 15, cx + mouth_w, mouth_y + 18),
-            start=200, end=340,
-            fill=(90, 50, 50),
-            width=3
+            start=200, end=340, fill=(90, 50, 50), width=3
         )
     elif mood == "bad":
         draw.arc(
             (cx - mouth_w, mouth_y - 5, cx + mouth_w, mouth_y + 25),
-            start=20, end=160,
-            fill=(90, 50, 50),
-            width=3
+            start=20, end=160, fill=(90, 50, 50), width=3
         )
     else:
         draw.line(
             (cx - mouth_w // 2, mouth_y, cx + mouth_w // 2, mouth_y),
-            fill=(90, 50, 50),
-            width=3
+            fill=(90, 50, 50), width=3
         )
 
     # Neck
@@ -477,7 +443,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         (cx - neck_w // 2, head_cy + head_radius,
          cx + neck_w // 2, head_cy + head_radius + neck_h),
         fill=skin_color,
-        outline=None
+        outline=skin_color,
     )
 
     # Torso
@@ -495,58 +461,54 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     body_left = cx - body_w // 2 + tilt
     body_right = cx + body_w // 2 + tilt
 
-    draw.rounded_rectangle(
+    draw.rectangle(
         (body_left, body_top, body_right, body_top + body_h),
-        radius=18,
         fill=shirt_color,
         outline=(80, 80, 80),
-        width=2
+        width=2,
     )
 
-    # Arms – openness affects pose
+    # Arms
     arm_y = body_top + 35
     arm_len = int(height * 0.22)
-    arm_width = 14
+    arm_width = 10
 
     if openness == "open":
+        # welcoming arms
         draw.line(
             (body_left + 5, arm_y,
              body_left - 30, arm_y + arm_len),
-            fill=shirt_color,
-            width=arm_width
+            fill=shirt_color, width=arm_width
         )
         draw.line(
             (body_right - 5, arm_y,
              body_right + 30, arm_y + arm_len),
-            fill=shirt_color,
-            width=arm_width
+            fill=shirt_color, width=arm_width
         )
     elif openness == "closed":
+        # crossed arms
         cross_y = arm_y + 20
         draw.line(
             (body_left + 5, cross_y + 10,
              cx + 10, cross_y - 10),
-            fill=shirt_color,
-            width=arm_width
+            fill=shirt_color, width=arm_width
         )
         draw.line(
             (cx - 10, cross_y - 10,
              body_right - 5, cross_y + 10),
-            fill=shirt_color,
-            width=arm_width
+            fill=shirt_color, width=arm_width
         )
     else:
+        # neutral arms down
         draw.line(
             (body_left + 5, arm_y,
              body_left + 5, arm_y + arm_len),
-            fill=shirt_color,
-            width=arm_width
+            fill=shirt_color, width=arm_width
         )
         draw.line(
             (body_right - 5, arm_y,
              body_right - 5, arm_y + arm_len),
-            fill=shirt_color,
-            width=arm_width
+            fill=shirt_color, width=arm_width
         )
 
     # Legs
@@ -558,34 +520,31 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     draw.rectangle(
         (cx - leg_gap - leg_w, leg_top,
          cx - leg_gap + leg_w, leg_top + leg_len),
-        fill=pants_color
+        fill=pants_color,
     )
     draw.rectangle(
         (cx + leg_gap - leg_w, leg_top,
          cx + leg_gap + leg_w, leg_top + leg_len),
-        fill=pants_color
+        fill=pants_color,
     )
 
     # Shoes
     shoe_h = 14
-    draw.rounded_rectangle(
+    draw.rectangle(
         (cx - leg_gap - 24, leg_top + leg_len,
          cx - leg_gap + 28, leg_top + leg_len + shoe_h),
-        radius=7,
-        fill=(30, 30, 30)
+        fill=(30, 30, 30),
     )
-    draw.rounded_rectangle(
+    draw.rectangle(
         (cx + leg_gap - 28, leg_top + leg_len,
          cx + leg_gap + 24, leg_top + leg_len + shoe_h),
-        radius=7,
-        fill=(30, 30, 30)
+        fill=(30, 30, 30),
     )
 
 
 def create_avatar_image(title: str, behaviours, role: str, profile: str, filename: str):
     """Create a full avatar image with figure on the left and behaviours on the right."""
     img_w, img_h = 1100, 800
-    # IMPORTANT: first size (img_w, img_h), then background colour tuple
     img = Image.new("RGB", (img_w, img_h), (245, 247, 250))
     draw = ImageDraw.Draw(img)
 
@@ -593,19 +552,17 @@ def create_avatar_image(title: str, behaviours, role: str, profile: str, filenam
     title_font = get_font(38)
     draw.text((40, 30), title, font=title_font, fill=(34, 46, 80))
 
-    # Small subtitle with role/profile
+    # Small subtitle
     subtitle_font = get_font(20)
-    subtitle = f"{role.capitalize()} – {profile.capitalize()} profile"
+    subtitle = f"{role.capitalize()} - {profile.capitalize()} profile"
     draw.text((40, 70), subtitle, font=subtitle_font, fill=(90, 104, 128))
 
-    # Analyse behaviours → traits
+    # Traits & avatar
     traits = analyze_behaviours(behaviours, role, profile)
-
-    # Avatar box on the left
     avatar_box = (40, 110, 460, img_h - 40)
     draw_avatar_person(draw, avatar_box, traits)
 
-    # Behaviours on the right
+    # Behaviours on right side
     text_left = 500
     text_top = 130
     max_width = img_w - text_left - 40
@@ -624,16 +581,19 @@ def create_avatar_image(title: str, behaviours, role: str, profile: str, filenam
                 test_line = (line + " " + w).strip()
                 w_width, _ = draw.textsize(test_line, font=behaviour_font)
                 if w_width > max_width and line:
-                    draw.text((text_left, y), "• " + line, font=behaviour_font, fill=(20, 20, 20))
+                    draw.text((text_left, y), "• " + line,
+                              font=behaviour_font, fill=(20, 20, 20))
                     y += line_spacing
                     line = w
                 else:
                     line = test_line
             if line:
-                draw.text((text_left, y), "• " + line, font=behaviour_font, fill=(20, 20, 20))
+                draw.text((text_left, y), "• " + line,
+                          font=behaviour_font, fill=(20, 20, 20))
                 y += line_spacing
     else:
-        draw.text((text_left, y), "No behaviours entered.", font=behaviour_font, fill=(120, 120, 120))
+        draw.text((text_left, y), "No behaviours entered.",
+                  font=behaviour_font, fill=(120, 120, 120))
 
     img.save(filename)
 
@@ -667,7 +627,6 @@ def generate():
         file_a_name = safe_filename(title_a)
         file_a_path = os.path.join(output_folder, file_a_name)
         create_avatar_image(title_a, behaviours_a, role_a, profile_a, file_a_path)
-
         block = f"""
         <div class='section'>
             <h2>{title_a}</h2>
@@ -678,7 +637,7 @@ def generate():
         """
         result_blocks.append(block)
 
-    # Avatar B (optional)
+    # Avatar B
     title_b = (request.form.get("title_b") or "").strip()
     role_b = (request.form.get("role_b") or "trainee").strip().lower()
     profile_b = (request.form.get("profile_b") or "mixed").strip().lower()
@@ -691,7 +650,6 @@ def generate():
         file_b_name = safe_filename(title_b)
         file_b_path = os.path.join(output_folder, file_b_name)
         create_avatar_image(title_b, behaviours_b, role_b, profile_b, file_b_path)
-
         block = f"""
         <div class='section'>
             <h2>{title_b}</h2>
