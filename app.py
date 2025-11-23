@@ -22,7 +22,7 @@ html_template = """
         }
         h1 {
             margin-bottom: 4px;
-            color: #3C577C;
+            color: #3C577C; /* Boliden blue-ish */
         }
         small {
             color: #6b7b8c;
@@ -93,7 +93,7 @@ html_template = """
 
     <p>
         Enter a title, select <strong>role</strong> and <strong>profile type</strong>, and describe the behaviours.<br>
-        The avatar&apos;s expression, posture and colours will reflect the behaviours you write.
+        The avatar's expression, posture and colours will reflect the behaviours you write.
     </p>
 
     <form method="POST" action="/generate">
@@ -171,7 +171,9 @@ def get_font(size: int) -> ImageFont.ImageFont:
         return ImageFont.truetype("arial.ttf", size)
     except OSError:
         try:
-            return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size)
+            return ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size
+            )
         except OSError:
             return ImageFont.load_default()
 
@@ -260,7 +262,7 @@ def analyze_behaviours(behaviours, role: str, profile: str):
     score_warm = sum(w in text for w in warmth_words)
     score_cold = sum(w in text for w in cold_words)
 
-    # --- Mood baseline from profile type ---
+    # Mood baseline from profile type
     if profile == "ultimate":
         mood = "good"
     elif profile == "worst":
@@ -337,8 +339,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     openness = traits["openness"]
     role = traits["role"]
 
-    # --- Colour theme based on Boliden-ish palette ---
-    # Base Boliden blue: #3C577C, lighter blue: #75A7D4
+    # Colour theme based on Boliden-like palette
     if traits["profile"] == "ultimate" or mood == "good":
         base_bg = (227, 242, 235)      # soft greenish
         shirt_color = (60, 87, 124)    # Boliden blue
@@ -349,7 +350,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         base_bg = (228, 236, 246)      # soft blue
         shirt_color = (117, 167, 212)  # lighter blue
 
-    # Trainees lite ljusare
+    # Trainees slightly lighter
     if role == "trainee":
         shirt_color = tuple(min(255, c + 20) for c in shirt_color)
 
@@ -557,12 +558,12 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     draw.rectangle(
         (cx - leg_gap - leg_w, leg_top,
          cx - leg_gap + leg_w, leg_top + leg_len),
-        fill=(44, 62, 80) if reliability == "high" else (127, 140, 141)
+        fill=pants_color
     )
     draw.rectangle(
         (cx + leg_gap - leg_w, leg_top,
          cx + leg_gap + leg_w, leg_top + leg_len),
-        fill=(44, 62, 80) if reliability == "high" else (127, 140, 141)
+        fill=pants_color
     )
 
     # Shoes
@@ -584,7 +585,8 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
 def create_avatar_image(title: str, behaviours, role: str, profile: str, filename: str):
     """Create a full avatar image with figure on the left and behaviours on the right."""
     img_w, img_h = 1100, 800
-    img = Image.new("RGB", (245, 247, 250))
+    # IMPORTANT: first size (img_w, img_h), then background colour tuple
+    img = Image.new("RGB", (img_w, img_h), (245, 247, 250))
     draw = ImageDraw.Draw(img)
 
     # Title
@@ -652,7 +654,7 @@ def generate():
 
     result_blocks = []
 
-    # --- Avatar A ---
+    # Avatar A
     title_a = (request.form.get("title_a") or "").strip()
     role_a = (request.form.get("role_a") or "mentor").strip().lower()
     profile_a = (request.form.get("profile_a") or "mixed").strip().lower()
@@ -676,7 +678,7 @@ def generate():
         """
         result_blocks.append(block)
 
-    # --- Avatar B ---
+    # Avatar B (optional)
     title_b = (request.form.get("title_b") or "").strip()
     role_b = (request.form.get("role_b") or "trainee").strip().lower()
     profile_b = (request.form.get("profile_b") or "mixed").strip().lower()
