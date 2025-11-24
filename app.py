@@ -193,9 +193,7 @@ def safe_filename(title: str) -> str:
 # =========================
 
 def analyze_behaviours(behaviours, role: str, profile: str):
-    """
-    Analyse behaviour text and derive visual traits.
-    """
+    """Analyse behaviour text and derive visual traits."""
     text = ("\n".join(behaviours)).lower()
 
     positive_words = [
@@ -316,33 +314,34 @@ def analyze_behaviours(behaviours, role: str, profile: str):
 
 def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     """
-    Draw a semi-cartoon person inside the given box.
-    Uses only basic Pillow primitives so it works everywhere.
+    Draw a more human-like cartoon person with face expression and body language
+    based on the traits dict from analyze_behaviours().
     """
     left, top, right, bottom = box
     width = right - left
     height = bottom - top
     cx = (left + right) // 2
 
-    mood = traits["mood"]
-    energy = traits["energy"]
+    mood = traits["mood"]          # good / bad / neutral
+    energy = traits["energy"]      # high / medium / low
     reliability = traits["reliability"]
     warmth = traits["warmth"]
     openness = traits["openness"]
     role = traits["role"]
 
-    # Colour theme
+    # --- Colours (panel + clothes) ----------------------------------------
     if traits["profile"] == "ultimate" or mood == "good":
-        panel_color = (227, 242, 235)
-        shirt_color = (60, 87, 124)
+        panel_color = (222, 243, 235)   # soft green
+        shirt_color = (60, 87, 144)     # Boliden blue
     elif traits["profile"] == "worst" or mood == "bad":
-        panel_color = (248, 231, 231)
-        shirt_color = (179, 65, 60)
+        panel_color = (252, 228, 228)   # soft red/pink
+        shirt_color = (179, 65, 60)     # muted red
     else:
-        panel_color = (228, 236, 246)
-        shirt_color = (117, 167, 212)
+        panel_color = (228, 236, 246)   # soft blue
+        shirt_color = (117, 167, 212)   # lighter blue
 
     if role == "trainee":
+        # trainees lite ljusare topp
         shirt_color = tuple(min(255, c + 20) for c in shirt_color)
 
     pants_color = (44, 62, 80)
@@ -354,7 +353,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
     if warmth == "cold":
         skin_color = (232, 220, 210)
 
-    # Panel background
+    # --- Panel background --------------------------------------------------
     margin = 8
     draw.rectangle(
         (left + margin, top + margin, right - margin, bottom - margin),
@@ -363,69 +362,95 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         width=2,
     )
 
-    # Head
+    # --- Head position: lägre vid låg energi/dåligt läge ------------------
+    base_head_cy = top + int(height * 0.24)
+    if energy == "low" or mood == "bad":
+        head_cy = base_head_cy + int(height * 0.02)
+    elif energy == "high" and mood == "good":
+        head_cy = base_head_cy - int(height * 0.01)
+    else:
+        head_cy = base_head_cy
+
     head_radius = int(height * 0.13)
-    head_cy = top + int(height * 0.24)
-    draw.ellipse(
-        (cx - head_radius, head_cy - head_radius,
-         cx + head_radius, head_cy + head_radius),
-        fill=skin_color,
-        outline=(90, 90, 90),
-        width=2,
+    head_box = (
+        cx - head_radius,
+        head_cy - head_radius,
+        cx + head_radius,
+        head_cy + head_radius,
     )
+    draw.ellipse(head_box, fill=skin_color, outline=(90, 90, 90), width=2)
 
-    # Hair
-    draw.pieslice(
-        (cx - head_radius, head_cy - head_radius,
-         cx + head_radius, head_cy + head_radius),
-        start=200, end=340,
-        fill=hair_color,
-        outline=hair_color,
+    # --- Hair: bara på övre delen av huvudet -------------------------------
+    hair_height = int(head_radius * 1.0)
+    hair_box = (
+        cx - head_radius,
+        head_cy - head_radius,
+        cx + head_radius,
+        head_cy - head_radius + hair_height,
     )
+    draw.ellipse(hair_box, fill=hair_color, outline=hair_color)
 
-    # Eyes
-    eye_y = head_cy - int(head_radius * 0.2)
+    # --- Eyes --------------------------------------------------------------
+    eye_y = head_cy - int(head_radius * 0.12)
     eye_offset_x = int(head_radius * 0.45)
     eye_r = 4
-    for dx in (-eye_offset_x, eye_offset_x):
-        draw.ellipse(
-            (cx + dx - eye_r, eye_y - eye_r,
-             cx + dx + eye_r, eye_y + eye_r),
-            fill=(40, 40, 40),
-        )
 
-    # Brows
-    brow_y = eye_y - 10
-    brow_len = 20
-    if mood == "good":
-        left_brow = (cx - eye_offset_x - 5, brow_y,
-                     cx - eye_offset_x + brow_len, brow_y + 2)
-        right_brow = (cx + eye_offset_x - brow_len, brow_y + 2,
-                      cx + eye_offset_x + 5, brow_y)
-    elif mood == "bad":
-        left_brow = (cx - eye_offset_x - 5, brow_y + 2,
-                     cx - eye_offset_x + brow_len, brow_y)
-        right_brow = (cx + eye_offset_x - brow_len, brow_y,
-                      cx + eye_offset_x + 5, brow_y + 2)
+    if mood == "bad" or energy == "low":
+        # halvstängda / trötta ögon – bara linjer
+        for dx in (-eye_offset_x, eye_offset_x):
+            draw.line(
+                (cx + dx - eye_r, eye_y,
+                 cx + dx + eye_r, eye_y),
+                fill=(40, 40, 40),
+                width=2
+            )
     else:
-        left_brow = (cx - eye_offset_x - 5, brow_y,
+        # öppna ögon
+        for dx in (-eye_offset_x, eye_offset_x):
+            draw.ellipse(
+                (cx + dx - eye_r, eye_y - eye_r,
+                 cx + dx + eye_r, eye_y + eye_r),
+                fill=(40, 40, 40),
+            )
+
+    # --- Brows -------------------------------------------------------------
+    brow_y = eye_y - 10
+    brow_len = 24
+
+    if mood == "good":
+        # lite uppåt/vänlig
+        left_brow = (cx - eye_offset_x - 6, brow_y + 2,
+                     cx - eye_offset_x + brow_len, brow_y - 1)
+        right_brow = (cx + eye_offset_x - brow_len, brow_y - 1,
+                      cx + eye_offset_x + 6, brow_y + 2)
+    elif mood == "bad":
+        # arg / bekymrad – nedåtvänd
+        left_brow = (cx - eye_offset_x - 6, brow_y - 1,
+                     cx - eye_offset_x + brow_len, brow_y + 4)
+        right_brow = (cx + eye_offset_x - brow_len, brow_y + 4,
+                      cx + eye_offset_x + 6, brow_y - 1)
+    else:
+        # neutrala
+        left_brow = (cx - eye_offset_x - 6, brow_y,
                      cx - eye_offset_x + brow_len, brow_y)
         right_brow = (cx + eye_offset_x - brow_len, brow_y,
-                      cx + eye_offset_x + 5, brow_y)
+                      cx + eye_offset_x + 6, brow_y)
+
     draw.line(left_brow, fill=(50, 40, 40), width=2)
     draw.line(right_brow, fill=(50, 40, 40), width=2)
 
-    # Mouth
-    mouth_y = head_cy + int(head_radius * 0.4)
+    # --- Mouth -------------------------------------------------------------
+    mouth_y = head_cy + int(head_radius * 0.45)
     mouth_w = int(head_radius * 0.9)
+
     if mood == "good":
         draw.arc(
-            (cx - mouth_w, mouth_y - 15, cx + mouth_w, mouth_y + 18),
+            (cx - mouth_w, mouth_y - 18, cx + mouth_w, mouth_y + 8),
             start=200, end=340, fill=(90, 50, 50), width=3
         )
     elif mood == "bad":
         draw.arc(
-            (cx - mouth_w, mouth_y - 5, cx + mouth_w, mouth_y + 25),
+            (cx - mouth_w, mouth_y - 4, cx + mouth_w, mouth_y + 24),
             start=20, end=160, fill=(90, 50, 50), width=3
         )
     else:
@@ -434,7 +459,7 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
             fill=(90, 50, 50), width=3
         )
 
-    # Neck
+    # --- Neck --------------------------------------------------------------
     neck_w = head_radius // 2
     neck_h = int(height * 0.05)
     draw.rectangle(
@@ -444,16 +469,18 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         outline=skin_color,
     )
 
-    # Torso
+    # --- Torso & hållning --------------------------------------------------
     body_top = head_cy + head_radius + neck_h
     body_h = int(height * 0.30)
     body_w = int(width * 0.32)
-    if energy == "high":
-        tilt = -6
-    elif energy == "low":
-        tilt = 6
+
+    if energy == "high" and mood == "good":
+        tilt = -4   # lite framåtlutad, engagerad
+    elif energy == "low" or mood == "bad":
+        tilt = 4    # lite “hängig”
     else:
         tilt = 0
+
     body_left = cx - body_w // 2 + tilt
     body_right = cx + body_w // 2 + tilt
 
@@ -464,74 +491,99 @@ def draw_avatar_person(draw: ImageDraw.ImageDraw, box, traits):
         width=2,
     )
 
-    # Arms
-    arm_y = body_top + 35
-    arm_len = int(height * 0.22)
+    # --- Arms --------------------------------------------------------------
+    shoulder_y = body_top + 18
+    arm_len = int(height * 0.23)
     arm_width = 10
-    if openness == "open":
+
+    if openness == "open" and mood == "good":
+        if energy == "high":
+            # armar upp/ut – mycket positiv
+            draw.line(
+                (body_left + 5, shoulder_y,
+                 body_left - 25, shoulder_y - arm_len + 15),
+                fill=shirt_color, width=arm_width
+            )
+            draw.line(
+                (body_right - 5, shoulder_y,
+                 body_right + 25, shoulder_y - arm_len + 15),
+                fill=shirt_color, width=arm_width
+            )
+        else:
+            # öppna armar snett nedåt
+            draw.line(
+                (body_left + 5, shoulder_y,
+                 body_left - 30, shoulder_y + arm_len),
+                fill=shirt_color, width=arm_width
+            )
+            draw.line(
+                (body_right - 5, shoulder_y,
+                 body_right + 30, shoulder_y + arm_len),
+                fill=shirt_color, width=arm_width
+            )
+    elif openness == "closed" or mood == "bad":
+        # korsade armar
+        cross_y = shoulder_y + 18
         draw.line(
-            (body_left + 5, arm_y,
-             body_left - 30, arm_y + arm_len),
-            fill=shirt_color, width=arm_width
-        )
-        draw.line(
-            (body_right - 5, arm_y,
-             body_right + 30, arm_y + arm_len),
-            fill=shirt_color, width=arm_width
-        )
-    elif openness == "closed":
-        cross_y = arm_y + 20
-        draw.line(
-            (body_left + 5, cross_y + 10,
+            (body_left + 5, cross_y + 12,
              cx + 10, cross_y - 10),
             fill=shirt_color, width=arm_width
         )
         draw.line(
             (cx - 10, cross_y - 10,
-             body_right - 5, cross_y + 10),
+             body_right - 5, cross_y + 12),
             fill=shirt_color, width=arm_width
         )
     else:
+        # neutralt – armar rakt ned
         draw.line(
-            (body_left + 5, arm_y,
-             body_left + 5, arm_y + arm_len),
+            (body_left + 5, shoulder_y,
+             body_left + 5, shoulder_y + arm_len),
             fill=shirt_color, width=arm_width
         )
         draw.line(
-            (body_right - 5, arm_y,
-             body_right - 5, arm_y + arm_len),
+            (body_right - 5, shoulder_y,
+             body_right - 5, shoulder_y + arm_len),
             fill=shirt_color, width=arm_width
         )
 
-    # Legs
+    # --- Legs & shoes ------------------------------------------------------
     leg_top = body_top + body_h
     leg_len = int(height * 0.26)
     leg_gap = 18
     leg_w = 16
+
+    leg_tilt = 3 if energy == "low" and mood == "bad" else 0
+
+    # vänster ben
     draw.rectangle(
-        (cx - leg_gap - leg_w, leg_top,
-         cx - leg_gap + leg_w, leg_top + leg_len),
+        (cx - leg_gap - leg_w + leg_tilt, leg_top,
+         cx - leg_gap + leg_w + leg_tilt, leg_top + leg_len),
         fill=pants_color,
     )
+    # höger ben
     draw.rectangle(
-        (cx + leg_gap - leg_w, leg_top,
-         cx + leg_gap + leg_w, leg_top + leg_len),
+        (cx + leg_gap - leg_w + leg_tilt, leg_top,
+         cx + leg_gap + leg_w + leg_tilt, leg_top + leg_len),
         fill=pants_color,
     )
 
-    # Shoes
     shoe_h = 14
     draw.rectangle(
-        (cx - leg_gap - 24, leg_top + leg_len,
-         cx - leg_gap + 28, leg_top + leg_len + shoe_h),
+        (cx - leg_gap - 24 + leg_tilt, leg_top + leg_len,
+         cx - leg_gap + 28 + leg_tilt, leg_top + leg_len + shoe_h),
         fill=(30, 30, 30),
     )
     draw.rectangle(
-        (cx + leg_gap - 28, leg_top + leg_len,
-         cx + leg_gap + 24, leg_top + leg_len + shoe_h),
+        (cx + leg_gap - 28 + leg_tilt, leg_top + leg_len,
+         cx + leg_gap + 24 + leg_tilt, leg_top + leg_len + shoe_h),
         fill=(30, 30, 30),
     )
 
+
+# =========================
+# CREATE IMAGE
+# =========================
 
 def create_avatar_image(title: str, behaviours, role: str, profile: str, filename: str):
     """Create a full avatar image with figure on the left and behaviours on the right."""
